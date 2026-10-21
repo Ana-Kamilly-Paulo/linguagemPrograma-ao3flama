@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crônicas de Aetherfall — RPG 3D</title>
+<style>
+:root{
+  --bg:#070b12;--panel:rgba(9,14,24,.88);--line:rgba(255,255,255,.12);
+  --text:#edf4ff;--muted:#9fb0c8;--accent:#78d7ff;--gold:#ffd36d;
+  --danger:#ff667d;--ok:#72f1a4;--purple:#b98cff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02050a;color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}
+canvas{display:block}
+#game{position:fixed;inset:0}
+.ui{position:fixed;inset:0;pointer-events:none;z-index:4}
+.panel{background:linear-gradient(180deg,rgba(15,23,39,.94),rgba(6,10,18,.90));border:1px solid var(--line);box-shadow:0 12px 40px rgba(0,0,0,.35);backdrop-filter:blur(12px)}
+#stats{position:absolute;left:16px;top:16px;width:min(390px,calc(100vw - 32px));padding:14px;border-radius:18px}
+.row{display:flex;align-items:center;gap:9px}.between{justify-content:space-between}
+.name{font-weight:900;letter-spacing:.05em}.lvl{font-size:12px;color:var(--gold)}
+.bar{height:10px;background:#111a27;border-radius:999px;overflow:hidden;border:1px solid #26354b;margin-top:7px}
+.fill{height:100%;transition:.2s}.hp{background:linear-gradient(90deg,#ff3d64,#ff728c)}.mp{background:linear-gradient(90deg,#4ea2ff,#8ac5ff)}.xp{background:linear-gradient(90deg,#b370ff,#dd9cff)}
+.mini{font-size:11px;color:var(--muted);margin-top:4px}
+#quest{position:absolute;right:16px;top:16px;width:330px;max-width:calc(100vw - 32px);padding:14px;border-radius:18px}
+#quest h3,#inventory h3,#journal h3{margin:0 0 9px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#ccefff}
+#questTitle{font-weight:800}.qdesc{font-size:12px;color:var(--muted);line-height:1.5;margin-top:4px}
+#message{position:absolute;left:50%;top:13%;transform:translateX(-50%);padding:10px 16px;border-radius:999px;font-weight:800;opacity:0;transition:.25s;white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis}
+#message.show{opacity:1}
+#interaction{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);padding:10px 16px;border-radius:14px;display:none;font-size:13px}
+#crosshair{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%)}
+#crosshair:before,#crosshair:after{content:"";position:absolute;background:rgba(255,255,255,.7)}
+#crosshair:before{left:8px;top:2px;width:2px;height:14px}#crosshair:after{top:8px;left:2px;width:14px;height:2px}
+#hotbar{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:8px}
+.slot{width:62px;height:62px;border-radius:14px;border:1px solid var(--line);background:rgba(5,10,18,.84);display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative}
+.slot b{font-size:18px}.slot small{font-size:9px;color:var(--muted);text-align:center}.slot .key{position:absolute;left:6px;top:4px;font-size:9px;color:#fff9}
+#minimap{position:absolute;right:16px;bottom:16px;width:170px;height:170px;border-radius:50%;border:1px solid var(--line);background:radial-gradient(circle,#172637 0,#07101a 68%);overflow:hidden}
+#mapInner{position:absolute;inset:0}.dot{position:absolute;width:7px;height:7px;border-radius:50%;transform:translate(-50%,-50%)}.me{background:#fff;box-shadow:0 0 12px white}.enemy{background:#ff5770}.npc{background:#75d8ff}.poi{background:#ffd66b}
+#controls{position:absolute;left:16px;bottom:16px;padding:10px 12px;border-radius:14px;font-size:11px;color:var(--muted);line-height:1.5}
+.modal{position:fixed;inset:0;z-index:12;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.62);pointer-events:auto}
+.modal.open{display:flex}
+.window{width:min(900px,92vw);max-height:82vh;overflow:auto;padding:22px;border-radius:22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#0c1420;cursor:pointer}
+.item:hover{border-color:#6bcdf2}.item .rarity{font-size:10px;color:var(--gold)}.item p{font-size:11px;color:var(--muted);margin:6px 0 0}
+.close{float:right;pointer-events:auto;cursor:pointer;background:#18263a;color:white;border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+#start{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:
+radial-gradient(circle at 50% 20%,rgba(47,124,181,.18),transparent 35%),
+linear-gradient(#050914,#020308);pointer-events:auto}
+.startbox{width:min(720px,92vw);padding:34px;border-radius:28px;text-align:center}
+.title{font-size:clamp(34px,7vw,78px);font-weight:1000;letter-spacing:-.05em;line-height:.9;margin:0;background:linear-gradient(180deg,#fff,#8fdcff 55%,#6187ff);color:transparent;background-clip:text}
+.subtitle{color:var(--muted);line-height:1.7;margin:20px auto;max-width:620px}
+button{pointer-events:auto;cursor:pointer;border:0;color:#061018;font-weight:900;border-radius:13px;padding:12px 18px;background:linear-gradient(135deg,#96e8ff,#6fb1ff)}
+button.secondary{background:#17253a;color:#dfefff;border:1px solid var(--line)}
+#bossbar{position:absolute;left:50%;top:84px;transform:translateX(-50%);width:min(620px,70vw);display:none;text-align:center}
+#bossbar .bar{height:14px}
+#death{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(40,0,6,.72);pointer-events:auto;text-align:center}
+#death.open{display:flex}
+@media(max-width:740px){#quest{display:none}#minimap{width:120px;height:120px}.slot{width:49px;height:52px}#controls{display:none}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+
+<div class="ui">
+  <div id="stats" class="panel">
+    <div class="row between"><div class="name">KAEL, O ERRANTE</div><div class="lvl" id="levelText">NÍVEL 1</div></div>
+    <div class="bar"><div class="fill hp" id="hpBar" style="width:100%"></div></div>
+    <div class="mini" id="hpText">100 / 100 VIDA</div>
+    <div class="bar"><div class="fill mp" id="manaBar" style="width:100%"></div></div>
+    <div class="mini" id="manaText">60 / 60 MANA</div>
+    <div class="bar"><div class="fill xp" id="xpBar" style="width:0%"></div></div>
+    <div class="mini" id="xpText">0 / 100 XP • 0 ouro</div>
+  </div>
+
+  <div id="quest" class="panel">
+    <h3>Missão ativa</h3>
+    <div id="questTitle">O Despertar</div>
+    <div class="qdesc" id="questDesc">Fale com Lyra perto da torre azul.</div>
+  </div>
+
+  <div id="message" class="panel"></div>
+  <div id="interaction" class="panel">E — Interagir</div>
+  <div id="crosshair"></div>
+
+  <div id="bossbar">
+    <div style="font-size:12px;font-weight:900;letter-spacing:.12em">MALAKOR, GUARDIÃO DO VAZIO</div>
+    <div class="bar panel"><div class="fill hp" id="bossHP" style="width:100%"></div></div>
+  </div>
+
+  <div id="hotbar">
+    <div class="slot"><span class="key">1</span><b>⚔</b><small>Golpe</small></div>
+    <div class="slot"><span class="key">2</span><b>✦</b><small>Raio Arcano</small></div>
+    <div class="slot"><span class="key">3</span><b>🧪</b><small>Poção</small></div>
+    <div class="slot"><span class="key">Q</span><b>💥</b><small>Investida</small></div>
+    <div class="slot"><span class="key">I</span><b>🎒</b><small>Inventário</small></div>
+  </div>
+  <div id="minimap" class="panel"><div id="mapInner"></div></div>
+  <div id="controls" class="panel">WASD mover • mouse olhar • Shift correr • Espaço pular<br>Click atacar • E interagir • 2 magia • 3 poção • I inventário • J diário</div>
+</div>
+
+<div id="inventory" class="modal">
+  <div class="window panel">
+    <button class="close" onclick="toggleInventory()">Fechar</button>
+    <h3>Inventário</h3>
+    <div id="invStats" class="qdesc"></div>
+    <div class="grid" id="items"></div>
+  </div>
+</div>
+
+<div id="journal" class="modal">
+  <div class="window panel">
+    <button class="close" onclick="toggleJournal()">Fechar</button>
+    <h3>Crônicas de Aetherfall</h3>
+    <div id="journalText" style="line-height:1.7;color:#bac8da"></div>
+  </div>
+</div>
+
+<div id="start">
+  <div class="startbox panel">
+    <div style="color:#78d7ff;font-size:12px;letter-spacing:.35em;margin-bottom:14px">RPG 3D DE NAVEGADOR</div>
+    <h1 class="title">CRÔNICAS DE<br>AETHERFALL</h1>
+    <p class="subtitle">Explore um reino 3D, aceite missões, lute contra inimigos humanoides animados, encontre equipamentos, suba de nível e enfrente Malakor, o Guardião do Vazio. O progresso é salvo automaticamente no navegador.</p>
+    <button id="playBtn">ENTRAR NO MUNDO</button>
+    <button class="secondary" onclick="resetSave()">APAGAR SAVE</button>
+    <div class="mini" style="margin-top:14px">Requer internet para carregar a biblioteca 3D Three.js.</div>
+  </div>
+</div>
+
+<div id="death">
+  <div class="startbox panel">
+    <h2 style="font-size:45px;margin:0">VOCÊ CAIU</h2>
+    <p class="subtitle">Aetherfall ainda precisa de você.</p>
+    <button onclick="respawn()">RENASCER</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"></script>
+<script>
+(()=>{
+'use strict';
+
+/* ==========================================================
+   CRÔNICAS DE AETHERFALL
+   RPG 3D de arquivo único.
+   ========================================================== */
+
+const el = id=>document.getElementById(id);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x08131e);
+scene.fog = new THREE.FogExp2(0x08131e,0.008);
+
+const camera = new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,1200);
+const renderer = new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.1;
+el('game').appendChild(renderer.domElement);
+
+const clock = new THREE.Clock();
+const world = new THREE.Group(); scene.add(world);
+const interactables=[], enemies=[], npcs=[], projectiles=[], drops=[], particles=[];
+const keys={};
+let yaw=0,pitch=-0.12,locked=false,gameStarted=false,nearInteract=null;
+let dayTime=.25, autosave=0, attackCd=0, spellCd=0, dashCd=0, regenTimer=0;
+
+const state={
+  level:1,xp:0,xpNext:100,gold:0,
+  hp:100,maxHp:100,mana:60,maxMana:60,
+  attack:14,armor:2,potions:3,
+  quest:0,kills:0,crystals:0,
+  inventory:[
+    {name:'Espada do Peregrino',type:'arma',rarity:'Comum',desc:'+0 ataque. Uma lâmina simples, mas confiável.'},
+    {name:'Túnica de Cinza',type:'armadura',rarity:'Comum',desc:'+0 armadura. Vestes de quem viajou longe.'}
+  ]
+};
+
+const quests=[
+  {title:'O Despertar',desc:'Fale com Lyra perto da torre azul.'},
+  {title:'Sombras na Estrada',desc:'Derrote 5 criaturas corrompidas.',goal:5},
+  {title:'Ecos de Cristal',desc:'Colete 3 Cristais de Aether.',goal:3},
+  {title:'A Ruína Antiga',desc:'Viaje até as ruínas ao norte e fale com Orin.'},
+  {title:'O Guardião do Vazio',desc:'Derrote o Guardião nas ruínas antigas.'},
+  {title:'Aetherfall Restaurada',desc:'Você venceu a campanha principal. Continue explorando e ficando mais forte.'}
+];
+
+function mat(color,rough=.8,metal=.05){return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal})}
+const mats={
+ grass:mat(0x244f3b,1), dirt:mat(0x64513c,1), stone:mat(0x596477,.9), darkstone:mat(0x252d39,.85),
+ wood:mat(0x5a3825,1), leaf:mat(0x1d5c3a,1), leaf2:mat(0x306c43,1), crystal:mat(0x4bdcff,.25,.25),
+ enemy:mat(0x6e1f3b,.7), enemy2:mat(0x2c1629,.7), skin:mat(0xd7a477,.9), cloth:mat(0x315a8f,.85),
+ gold:mat(0xe0a83d,.45,.55), boss:mat(0x33173f,.45,.25)
+};
+
+function mesh(geo,material,x=0,y=0,z=0,cast=true,receive=true){
+ const m=new THREE.Mesh(geo,material);m.position.set(x,y,z);m.castShadow=cast;m.receiveShadow=receive;world.add(m);return m
+}
+
+/* Lighting */
+const hemi=new THREE.HemisphereLight(0x9ed8ff,0x182011,1.6);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff0cf,2.2);sun.position.set(70,120,40);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-160;sun.shadow.camera.right=160;sun.shadow.camera.top=160;sun.shadow.camera.bottom=-160;scene.add(sun);
+
+/* Terrain */
+const ground=mesh(new THREE.PlaneGeometry(520,520,32,32),mats.grass,0,0,0,false,true);ground.rotation.x=-Math.PI/2;
+for(let i=0;i<60;i++){
+ const a=Math.random()*Math.PI*2,r=28+Math.random()*225;
+ const x=Math.cos(a)*r,z=Math.sin(a)*r;
+ const s=4+Math.random()*9;
+ const rock=mesh(new THREE.DodecahedronGeometry(s,0),Math.random()<.5?mats.stone:mats.darkstone,x,s*.32,z);
+ rock.scale.y=.45+Math.random()*.5;rock.rotation.set(Math.random(),Math.random(),Math.random());
+}
+function tree(x,z,s=1){
+ const trunk=mesh(new THREE.CylinderGeometry(.65*s,.9*s,6*s,7),mats.wood,x,3*s,z);
+ const crown=mesh(new THREE.ConeGeometry(4*s,9*s,8),Math.random()<.5?mats.leaf:mats.leaf2,x,9*s,z);
+ crown.rotation.y=Math.random();
+}
+for(let i=0;i<100;i++){
+ let x=(Math.random()-.5)*450,z=(Math.random()-.5)*450;
+ if(Math.hypot(x,z)<30||Math.hypot(x,z+135)<38) continue;
+ tree(x,z,.65+Math.random()*.75);
+}
+
+/* Roads */
+function road(x,z,w,h,rot=0){
+ const m=mesh(new THREE.PlaneGeometry(w,h),mats.dirt,x,.025,z,false,true);m.rotation.x=-Math.PI/2;m.rotation.z=rot;
+}
+road(0,-55,9,145);road(0,-135,80,8);road(0,45,9,60);
+
+/* Village */
+function house(x,z,rot=0){
+ const g=new THREE.Group();world.add(g);g.position.set(x,0,z);g.rotation.y=rot;
+ const base=new THREE.Mesh(new THREE.BoxGeometry(10,7,9),mat(0xb39168,1));base.position.y=3.5;base.castShadow=base.receiveShadow=true;g.add(base);
+ const roof=new THREE.Mesh(new THREE.ConeGeometry(8,5,4),mat(0x5d2f2f,1));roof.position.y=9;roof.rotation.y=Math.PI/4;roof.castShadow=true;g.add(roof);
+ const door=new THREE.Mesh(new THREE.BoxGeometry(2,4,.25),mats.wood);door.position.set(0,2,4.6);g.add(door);
+}
+house(-17,-32,.15);house(18,-28,-.15);house(-22,-58,0);house(22,-62,0);
+
+/* Blue tower */
+const tower=mesh(new THREE.CylinderGeometry(6,8,24,10),mats.darkstone,26,12,-96);
+const towerCrystal=mesh(new THREE.OctahedronGeometry(3),mats.crystal,26,27,-96);
+towerCrystal.userData.spin=true;
+const blueLight=new THREE.PointLight(0x4bdcff,50,65);blueLight.position.set(26,27,-96);scene.add(blueLight);
+
+/* Ruins and boss arena */
+for(let i=0;i<10;i++){
+ const a=i/10*Math.PI*2;
+ const col=mesh(new THREE.CylinderGeometry(1.4,1.7,12,8),mats.stone,Math.cos(a)*24,6,92+Math.sin(a)*24);
+ col.rotation.z=(Math.random()-.5)*.18;
+}
+const altar=mesh(new THREE.BoxGeometry(12,2,8),mats.darkstone,0,1,92);
+const portal=mesh(new THREE.TorusGeometry(7,.8,12,28),mats.crystal,0,9,106);portal.rotation.y=Math.PI/2;portal.userData.spin=true;
+const portalLight=new THREE.PointLight(0x6ce6ff,35,50);portalLight.position.set(0,9,106);scene.add(portalLight);
+
+/* Player */
+const player=new THREE.Group();scene.add(player);player.position.set(0,1.0,-6);
+const body=new THREE.Mesh(new THREE.CapsuleGeometry(.6,1.45,5,8),mat(0x6e87b6,.7));body.position.y=1.25;body.castShadow=true;player.add(body);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.48,12,10),mats.skin);head.position.y=2.55;head.castShadow=true;player.add(head);
+const sword=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,2.0),mat(0xd7e7ef,.25,.8));sword.position.set(.9,1.35,.35);sword.rotation.x=.65;player.add(sword);
+player.userData.vy=0;
+
+/* NPC */
+function makeNPC(name,x,z,color=0x3d70a8){
+ const g=new THREE.Group();scene.add(g);g.position.set(x,0,z);
+ const b=new THREE.Mesh(new THREE.CapsuleGeometry(.55,1.25,4,8),mat(color,.8));b.position.y=1.2;b.castShadow=true;g.add(b);
+ const h=new THREE.Mesh(new THREE.SphereGeometry(.43,12,10),mats.skin);h.position.y=2.35;h.castShadow=true;g.add(h);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(.72,.08,8,20),mats.crystal);ring.position.y=3.25;ring.rotation.x=Math.PI/2;g.add(ring);
+ g.userData={kind:'npc',name,ring};npcs.push(g);interactables.push(g);return g;
+}
+const lyra=makeNPC('Lyra',20,-87,0x2f78b7);
+const orin=makeNPC('Orin',-5,86,0x7652a5);
+
+/* Enemies */
+function makeEnemyPart(geo, material, parent, x,y,z, cast=true){
+ const m=new THREE.Mesh(geo,material);
+ m.position.set(x,y,z);
+ m.castShadow=cast;
+ m.receiveShadow=true;
+ parent.add(m);
+ return m;
+}
+
+function spawnEnemy(x,z,tier=1,boss=false){
+ const g=new THREE.Group();
+ scene.add(g);
+ g.position.set(x,0,z);
+
+ const s=boss?1.55:(.9+tier*.05);
+ const skinMat=mat(boss?0x5e355f:0x5a303b,.82);
+ const armorMat=mat(boss?0x17111d:0x2d2630,.48,.35);
+ const clothMat=mat(boss?0x32124b:0x541d32,.82);
+ const boneMat=mat(0xc8b28c,.85);
+ const glowMat=new THREE.MeshStandardMaterial({
+   color:boss?0xaa54ff:0xff304f,
+   emissive:boss?0x5c188e:0x7a081c,
+   emissiveIntensity:2.4,
+   roughness:.28,
+   metalness:.12
+ });
+
+ // Torso
+ const torso=makeEnemyPart(new THREE.BoxGeometry(1.15*s,1.65*s,.72*s),armorMat,g,0,2.15*s,0);
+ torso.rotation.x=.03;
+
+ // Chest armor plate
+ const chest=makeEnemyPart(new THREE.BoxGeometry(.92*s,.75*s,.16*s),clothMat,g,0,2.35*s,.42*s);
+ chest.rotation.x=-.08;
+
+ // Waist / belt
+ const waist=makeEnemyPart(new THREE.CylinderGeometry(.55*s,.48*s,.34*s,8),armorMat,g,0,1.25*s,0);
+ const belt=makeEnemyPart(new THREE.TorusGeometry(.48*s,.07*s,6,14),mats.gold,g,0,1.28*s,0);
+ belt.rotation.x=Math.PI/2;
+
+ // Head + jaw
+ const head=makeEnemyPart(new THREE.SphereGeometry(.48*s,16,12),skinMat,g,0,3.35*s,0);
+ head.scale.set(.92,1.06,.92);
+ const jaw=makeEnemyPart(new THREE.BoxGeometry(.55*s,.24*s,.46*s),skinMat,g,0,3.04*s,.10*s);
+
+ // Eyes
+ const eyeL=makeEnemyPart(new THREE.SphereGeometry(.08*s,8,6),glowMat,g,-.17*s,3.39*s,.42*s,false);
+ const eyeR=makeEnemyPart(new THREE.SphereGeometry(.08*s,8,6),glowMat,g,.17*s,3.39*s,.42*s,false);
+
+ // Horns
+ const hornL=makeEnemyPart(new THREE.ConeGeometry(.13*s,.95*s,7),boneMat,g,-.34*s,4.02*s,-.02*s);
+ const hornR=makeEnemyPart(new THREE.ConeGeometry(.13*s,.95*s,7),boneMat,g,.34*s,4.02*s,-.02*s);
+ hornL.rotation.z=.45; hornR.rotation.z=-.45;
+ hornL.rotation.x=-.15; hornR.rotation.x=-.15;
+
+ // Shoulder pads
+ const shL=makeEnemyPart(new THREE.SphereGeometry(.38*s,10,8),armorMat,g,-.72*s,2.62*s,0);
+ const shR=makeEnemyPart(new THREE.SphereGeometry(.38*s,10,8),armorMat,g,.72*s,2.62*s,0);
+ shL.scale.set(1.25,.65,1); shR.scale.set(1.25,.65,1);
+
+ // Arms are pivot groups so they can animate.
+ const armL=new THREE.Group(), armR=new THREE.Group();
+ armL.position.set(-.73*s,2.5*s,0); armR.position.set(.73*s,2.5*s,0);
+ g.add(armL,armR);
+ makeEnemyPart(new THREE.CylinderGeometry(.14*s,.18*s,1.15*s,8),skinMat,armL,0,-.55*s,0).rotation.z=.06;
+ makeEnemyPart(new THREE.CylinderGeometry(.14*s,.18*s,1.15*s,8),skinMat,armR,0,-.55*s,0).rotation.z=-.06;
+ makeEnemyPart(new THREE.SphereGeometry(.18*s,8,6),skinMat,armL,0,-1.18*s,.02*s);
+ makeEnemyPart(new THREE.SphereGeometry(.18*s,8,6),skinMat,armR,0,-1.18*s,.02*s);
+
+ // Weapon in right hand
+ const weapon=makeEnemyPart(new THREE.BoxGeometry(.16*s,.16*s,1.9*s),mat(0xa6b1c4,.25,.85),armR,.08*s,-1.32*s,.58*s);
+ weapon.rotation.x=.36;
+ const weaponTip=makeEnemyPart(new THREE.ConeGeometry(.18*s,.55*s,6),glowMat,armR,.08*s,-1.62*s,1.48*s);
+ weaponTip.rotation.x=Math.PI/2+.36;
+
+ // Legs
+ const legL=new THREE.Group(), legR=new THREE.Group();
+ legL.position.set(-.28*s,1.12*s,0); legR.position.set(.28*s,1.12*s,0);
+ g.add(legL,legR);
+ makeEnemyPart(new THREE.CylinderGeometry(.18*s,.22*s,1.35*s,8),armorMat,legL,0,-.62*s,0);
+ makeEnemyPart(new THREE.CylinderGeometry(.18*s,.22*s,1.35*s,8),armorMat,legR,0,-.62*s,0);
+ const footL=makeEnemyPart(new THREE.BoxGeometry(.4*s,.28*s,.76*s),armorMat,legL,0,-1.34*s,.18*s);
+ const footR=makeEnemyPart(new THREE.BoxGeometry(.4*s,.28*s,.76*s),armorMat,legR,0,-1.34*s,.18*s);
+
+ // Cape for silhouette
+ const cape=makeEnemyPart(new THREE.PlaneGeometry(1.25*s,2.05*s),clothMat,g,0,2.22*s,-.43*s,false);
+ cape.rotation.x=.06;
+
+ // Boss extras
+ if(boss){
+   const crown=new THREE.Group(); crown.position.set(0,4.14*s,0); g.add(crown);
+   for(let i=-2;i<=2;i++){
+     const spike=makeEnemyPart(new THREE.ConeGeometry(.12*s,(.65+Math.abs(i)*.1)*s,6),glowMat,crown,i*.2*s,.22*s,0);
+     spike.rotation.z=-i*.1;
+   }
+   const aura=new THREE.PointLight(0x9a4dff,34,22);
+   aura.position.set(0,3.2*s,0);
+   g.add(aura);
+ }
+
+ g.userData={
+   kind:'enemy',tier,boss,
+   hp:boss?850:48+tier*22,
+   maxHp:boss?850:48+tier*22,
+   damage:boss?22:6+tier*2.6,
+   speed:boss?2.15:1.05+tier*.16,
+   aggro:boss?60:22,
+   dead:false,attack:0,wander:Math.random()*6,
+   armL,armR,legL,legR,head,weapon,
+   animOffset:Math.random()*Math.PI*2,
+   hitFlash:0
+ };
+ enemies.push(g);
+ return g;
+}
+[[12,-115,1],[-22,-120,1],[36,-135,2],[-36,-146,2],[55,-92,2],[-62,-78,2],
+ [70,18,3],[-65,27,3],[52,58,3],[-53,67,3],[25,43,2],[-23,52,2]].forEach(e=>spawnEnemy(...e));
+let boss=spawnEnemy(0,102,5,true);boss.visible=false;
+
+/* Crystals */
+function makeCrystal(x,z){
+ const c=mesh(new THREE.OctahedronGeometry(1.35),mats.crystal,x,1.8,z);
+ c.userData={kind:'crystal',spin:true,collected:false};interactables.push(c);return c;
+}
+makeCrystal(43,-15);makeCrystal(-58,4);makeCrystal(29,52);makeCrystal(-36,56);
+
+/* POIs */
+const pois=[
+ {name:'Vila de Elden',x:0,z:-45},{name:'Torre de Lyra',x:26,z:-96},{name:'Ruínas do Véu',x:0,z:92}
+];
+
+/* Grass particles / fireflies */
+const fireflyGeo=new THREE.SphereGeometry(.08,5,4);
+const fireflyMat=new THREE.MeshBasicMaterial({color:0xb6f7ff});
+for(let i=0;i<90;i++){
+ const f=new THREE.Mesh(fireflyGeo,fireflyMat);f.position.set((Math.random()-.5)*320,1+Math.random()*8,(Math.random()-.5)*320);
+ f.userData.phase=Math.random()*10;scene.add(f);particles.push(f);
+}
+
+/* Input */
+addEventListener('keydown',e=>{
+ keys[e.code]=true;
+ if(e.code==='KeyI') toggleInventory();
+ if(e.code==='KeyJ') toggleJournal();
+ if(e.code==='KeyE') interact();
+ if(e.code==='Digit2') castSpell();
+ if(e.code==='Digit3') drinkPotion();
+ if(e.code==='KeyQ') dash();
+});
+addEventListener('keyup',e=>keys[e.code]=false);
+renderer.domElement.addEventListener('click',()=>{
+ if(!locked && gameStarted){renderer.domElement.requestPointerLock();}
+ else if(locked) melee();
+});
+document.addEventListener('pointerlockchange',()=>locked=document.pointerLockElement===renderer.domElement);
+document.addEventListener('mousemove',e=>{
+ if(!locked)return;
+ yaw-=e.movementX*.0022; pitch-=e.movementY*.0018; pitch=Math.max(-.9,Math.min(.55,pitch));
+});
+
+/* Game functions */
+function showMessage(t,color='#dff6ff'){
+ const m=el('message');m.textContent=t;m.style.color=color;m.classList.add('show');
+ clearTimeout(showMessage.t);showMessage.t=setTimeout(()=>m.classList.remove('show'),2200);
+}
+function updateUI(){
+ el('hpBar').style.width=100*state.hp/state.maxHp+'%';el('hpText').textContent=Math.ceil(state.hp)+' / '+state.maxHp+' VIDA';
+ el('manaBar').style.width=100*state.mana/state.maxMana+'%';el('manaText').textContent=Math.ceil(state.mana)+' / '+state.maxMana+' MANA';
+ el('xpBar').style.width=100*state.xp/state.xpNext+'%';el('xpText').textContent=state.xp+' / '+state.xpNext+' XP • '+state.gold+' ouro';
+ el('levelText').textContent='NÍVEL '+state.level;
+ el('questTitle').textContent=quests[state.quest].title;
+ let d=quests[state.quest].desc;
+ if(state.quest===1)d+=` (${Math.min(state.kills,5)}/5)`;
+ if(state.quest===2)d+=` (${Math.min(state.crystals,3)}/3)`;
+ el('questDesc').textContent=d;
+}
+function gainXP(n){
+ state.xp+=n;state.gold+=Math.ceil(n*.28);
+ while(state.xp>=state.xpNext){
+  state.xp-=state.xpNext;state.level++;state.xpNext=Math.floor(state.xpNext*1.35);
+  state.maxHp+=18;state.maxMana+=8;state.attack+=3;state.armor+=1;state.hp=state.maxHp;state.mana=state.maxMana;
+  showMessage('NÍVEL '+state.level+'! Seus atributos aumentaram.','#ffd36d');
+ }
+ updateUI();
+}
+function damageEnemy(e,d){
+ if(!e||e.userData.dead)return;
+ e.userData.hp-=d;
+ const oldScale=e.userData.boss?1.0:1.0;
+ e.scale.set(1.08,.94,1.08);
+ setTimeout(()=>{if(e.parent)e.scale.set(oldScale,oldScale,oldScale)},85);
+ if(e.userData.boss)el('bossHP').style.width=Math.max(0,e.userData.hp/e.userData.maxHp*100)+'%';
+ if(e.userData.hp<=0) killEnemy(e);
+}
+function killEnemy(e){
+ e.userData.dead=true;e.visible=false;
+ if(e.userData.boss){
+  el('bossbar').style.display='none';state.quest=5;gainXP(700);state.gold+=500;
+  state.inventory.push({name:'Coroa do Vazio Partido',type:'relíquia',rarity:'Lendário',desc:'+25 ataque, +10 armadura. Troféu do Guardião.'});
+  state.attack+=25;state.armor+=10;showMessage('O GUARDIÃO CAIU. Aetherfall foi libertada!','#ffd36d');saveGame();updateUI();return;
+ }
+ state.kills++;gainXP(22+e.userData.tier*9);
+ if(Math.random()<.28){state.potions++;showMessage('Poção encontrada!','#72f1a4')}
+ if(Math.random()<.18){
+  const names=['Lâmina Rúnica','Manto do Caçador','Anel de Aether','Botas do Vento','Amuleto Antigo'];
+  const name=names[Math.floor(Math.random()*names.length)];
+  state.inventory.push({name,type:'equipamento',rarity:'Raro',desc:'+2 ataque e +1 armadura.'});state.attack+=2;state.armor+=1;
+  showMessage(name+' obtido!','#b98cff');
+ }
+ if(state.quest===1&&state.kills>=5){state.quest=2;showMessage('Missão concluída! Procure Cristais de Aether.','#ffd36d')}
+ updateUI();
+}
+function melee(){
+ if(attackCd>0||state.hp<=0)return;attackCd=.42;
+ sword.rotation.z=-1.3;setTimeout(()=>sword.rotation.z=0,170);
+ const fwd=new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
+ let hit=false;
+ enemies.forEach(e=>{
+  if(!e.visible||e.userData.dead)return;
+  const to=e.position.clone().sub(player.position);const dist=to.length();
+  if(dist<3.7 && fwd.dot(to.normalize())>.15){damageEnemy(e,state.attack+Math.floor(Math.random()*6));hit=true;}
+ });
+ if(hit)showMessage('Golpe acertou!','#fff');
+}
+function castSpell(){
+ if(spellCd>0||state.mana<14||state.hp<=0)return;state.mana-=14;spellCd=.75;updateUI();
+ const orb=new THREE.Mesh(new THREE.SphereGeometry(.3,10,8),new THREE.MeshBasicMaterial({color:0x74ddff}));
+ scene.add(orb);orb.position.copy(player.position).add(new THREE.Vector3(0,1.6,0));
+ const dir=new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)).normalize();
+ projectiles.push({mesh:orb,dir,life:2.3,damage:state.attack*1.65+8});
+}
+function dash(){
+ if(dashCd>0||state.mana<10)return;state.mana-=10;dashCd=2;
+ const d=new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));player.position.addScaledVector(d,7);updateUI();
+}
+function drinkPotion(){
+ if(state.potions<=0){showMessage('Sem poções.','#ff8798');return}
+ if(state.hp>=state.maxHp)return;state.potions--;state.hp=Math.min(state.maxHp,state.hp+55+state.level*3);showMessage('Vida restaurada.','#72f1a4');updateUI();
+}
+function interact(){
+ if(!nearInteract)return;
+ if(nearInteract.userData.kind==='npc'){
+  if(nearInteract.userData.name==='Lyra'){
+   if(state.quest===0){state.quest=1;showMessage('Lyra: criaturas do Vazio cercam a estrada. Derrote 5.');}
+   else if(state.quest===2&&state.crystals>=3){state.quest=3;showMessage('Lyra: leve os cristais até Orin, nas ruínas ao norte.');}
+   else showMessage('Lyra: Aether responde àqueles que persistem.');
+  }
+  if(nearInteract.userData.name==='Orin'){
+   if(state.quest===3){state.quest=4;boss.visible=true;el('bossbar').style.display='block';showMessage('Orin: o Guardião despertou. Derrote-o!','#ffd36d')}
+   else showMessage('Orin: as ruínas guardam memórias de uma era perdida.');
+  }
+ }else if(nearInteract.userData.kind==='crystal'&&!nearInteract.userData.collected){
+  nearInteract.userData.collected=true;nearInteract.visible=false;state.crystals++;
+  showMessage('Cristal de Aether coletado.','#78d7ff');
+  if(state.quest===2&&state.crystals>=3){showMessage('Cristais suficientes! Volte para Lyra.','#ffd36d')}
+ }
+ updateUI();
+}
+function takeDamage(n){
+ n=Math.max(1,n-state.armor*.35);state.hp-=n;updateUI();
+ if(state.hp<=0){state.hp=0;el('death').classList.add('open');document.exitPointerLock();}
+}
+window.respawn=()=>{
+ state.hp=state.maxHp;state.mana=state.maxMana;player.position.set(0,1,-12);
+ el('death').classList.remove('open');updateUI();
+};
+function toggleInventory(){
+ const m=el('inventory');m.classList.toggle('open');
+ if(m.classList.contains('open'))document.exitPointerLock();
+ el('invStats').textContent=`Ataque ${state.attack} • Armadura ${state.armor} • Poções ${state.potions} • Ouro ${state.gold}`;
+ el('items').innerHTML=state.inventory.map(i=>`<div class="item"><b>${i.name}</b><div class="rarity">${i.rarity} • ${i.type}</div><p>${i.desc}</p></div>`).join('');
+}
+window.toggleInventory=toggleInventory;
+function toggleJournal(){
+ const m=el('journal');m.classList.toggle('open');if(m.classList.contains('open'))document.exitPointerLock();
+ el('journalText').innerHTML=`
+ <b>Capítulo I — O Despertar</b><p>Kael desperta nos campos de Aetherfall sem saber por que a energia do mundo responde à sua presença.</p>
+ <b>Capítulo II — A Corrupção</b><p>Sombras atravessaram o Véu. Lyra, guardiã da torre azul, acredita que cristais antigos podem abrir o caminho até a origem da ameaça.</p>
+ <b>Capítulo III — As Ruínas</b><p>Ao norte repousam as Ruínas do Véu. Orin conhece o ritual capaz de revelar o Guardião.</p>
+ <b>Seu progresso</b><p>Nível ${state.level}. ${state.kills} inimigos derrotados. ${state.crystals} cristais coletados. Missão atual: ${quests[state.quest].title}.</p>`;
+}
+window.toggleJournal=toggleJournal;
+
+function saveGame(){
+ try{
+  localStorage.setItem('aetherfall_save',JSON.stringify({...state,pos:[player.position.x,player.position.y,player.position.z]}));
+ }catch(e){}
+}
+function loadGame(){
+ try{
+  const s=JSON.parse(localStorage.getItem('aetherfall_save')||'null');if(!s)return;
+  Object.assign(state,s);if(s.pos)player.position.set(...s.pos);
+  if(state.quest>=4&&!boss.userData.dead){boss.visible=true;el('bossbar').style.display='block'}
+ }catch(e){}
+ updateUI();
+}
+window.resetSave=()=>{localStorage.removeItem('aetherfall_save');location.reload()};
+
+/* Collision-ish movement */
+function blocked(p){
+ if(Math.abs(p.x)>247||Math.abs(p.z)>247)return true;
+ const centers=[[26,-96,9],[0,92,7]];
+ for(const c of centers)if(Math.hypot(p.x-c[0],p.z-c[1])<c[2] && !(c[1]===92&&state.quest>=4))return true;
+ return false;
+}
+function movePlayer(dt){
+ let ix=(keys.KeyD?1:0)-(keys.KeyA?1:0),iz=(keys.KeyW?1:0)-(keys.KeyS?1:0);
+ if(ix||iz){
+  const len=Math.hypot(ix,iz);ix/=len;iz/=len;
+  const forward=new THREE.Vector3(Math.sin(yaw),0,-Math.cos(yaw));
+  const right=new THREE.Vector3(Math.cos(yaw),0,Math.sin(yaw));
+  const dir=forward.multiplyScalar(iz).add(right.multiplyScalar(ix));
+  const speed=(keys.ShiftLeft||keys.ShiftRight)?10.5:6.2;
+  const next=player.position.clone().addScaledVector(dir,speed*dt);
+  if(!blocked(next))player.position.copy(next);
+  player.rotation.y=yaw;body.position.y=1.25+Math.sin(performance.now()*.012)*.04;
+ }
+ if(keys.Space && player.position.y<=1.01)player.userData.vy=6.5;
+ player.userData.vy-=16*dt;player.position.y+=player.userData.vy*dt;
+ if(player.position.y<1){player.position.y=1;player.userData.vy=0}
+}
+
+/* Camera */
+function updateCamera(dt){
+ const dist=7.2;
+ const target=player.position.clone().add(new THREE.Vector3(0,1.7,0));
+ const offset=new THREE.Vector3(
+   -Math.sin(yaw)*Math.cos(pitch)*dist,
+   2.2-Math.sin(pitch)*dist,
+   Math.cos(yaw)*Math.cos(pitch)*dist
+ );
+ const desired=target.clone().add(offset);
+ camera.position.lerp(desired,1-Math.pow(.0001,dt));
+ camera.lookAt(target);
+}
+
+/* Enemy AI */
+function updateEnemies(dt){
+ const t=performance.now()*.006;
+ enemies.forEach(e=>{
+  if(!e.visible||e.userData.dead)return;
+  const u=e.userData;
+  u.attack=Math.max(0,u.attack-dt);
+  const d=e.position.distanceTo(player.position);
+  let moving=false;
+
+  if(d<u.aggro){
+   const dir=player.position.clone().sub(e.position);
+   dir.y=0;
+   if(dir.lengthSq()>0.0001)dir.normalize();
+
+   if(d>2.25){
+     e.position.addScaledVector(dir,u.speed*dt);
+     moving=true;
+   }
+   e.lookAt(player.position.x,e.position.y,player.position.z);
+
+   if(d<2.8&&u.attack<=0){
+     u.attack=u.boss?.68:1.08;
+     if(u.armR){
+       u.armR.rotation.x=-1.55;
+       setTimeout(()=>{ if(u.armR)u.armR.rotation.x=0; },180);
+     }
+     takeDamage(u.damage);
+   }
+  }else if(!u.boss){
+   u.wander-=dt;
+   if(u.wander<0){
+     u.wander=2+Math.random()*5;
+     u.wdir=Math.random()*Math.PI*2;
+   }
+   if(u.wdir!=null){
+     e.position.x+=Math.sin(u.wdir)*.22*dt;
+     e.position.z+=Math.cos(u.wdir)*.22*dt;
+     moving=true;
+   }
+  }
+
+  // Procedural walk + idle animation.
+  const phase=t*(u.boss?1.25:1.8)+u.animOffset;
+  const swing=moving?Math.sin(phase)*.55:Math.sin(phase*.55)*.06;
+  if(u.legL)u.legL.rotation.x=swing;
+  if(u.legR)u.legR.rotation.x=-swing;
+  if(u.armL)u.armL.rotation.x+=( (-swing*.7)-u.armL.rotation.x)*Math.min(1,dt*10);
+  if(u.armR && u.attack<=0)u.armR.rotation.x+=( (swing*.55)-u.armR.rotation.x)*Math.min(1,dt*10);
+  if(u.head)u.head.rotation.y=Math.sin(phase*.35)*.08;
+  e.position.y=Math.sin(phase*2)*.025;
+ });
+}
+
+/* Interactions */
+function updateInteractions(){
+ let best=null,bd=4.2;
+ interactables.forEach(o=>{
+  if(!o.visible)return;
+  const d=o.position.distanceTo(player.position);
+  if(d<bd){bd=d;best=o;}
+  if(o.userData.ring)o.userData.ring.rotation.z+=.02;
+  if(o.userData.spin)o.rotation.y+=.015;
+ });
+ nearInteract=best;el('interaction').style.display=best?'block':'none';
+ if(best)el('interaction').textContent='E — '+(best.userData.kind==='npc'?'Falar com '+best.userData.name:'Coletar Cristal de Aether');
+}
+
+/* Projectiles */
+function updateProjectiles(dt){
+ for(let i=projectiles.length-1;i>=0;i--){
+  const p=projectiles[i];p.life-=dt;p.mesh.position.addScaledVector(p.dir,22*dt);
+  let remove=p.life<=0;
+  for(const e of enemies){
+   if(e.visible&&!e.userData.dead&&p.mesh.position.distanceTo(e.position.clone().add(new THREE.Vector3(0,1,0)))<1.4*(e.userData.boss?2:1)){
+    damageEnemy(e,p.damage);remove=true;break;
+   }
+  }
+  if(remove){scene.remove(p.mesh);projectiles.splice(i,1);}
+ }
+}
+
+/* Day night */
+function updateDay(dt){
+ dayTime=(dayTime+dt*.005)%1;
+ const a=dayTime*Math.PI*2;
+ sun.position.set(Math.cos(a)*120,Math.sin(a)*115,45);
+ const daylight=Math.max(.1,Math.sin(a)*.7+.45);
+ sun.intensity=.25+daylight*2.4;hemi.intensity=.35+daylight*1.5;
+ const day=new THREE.Color(0x7db7d6),night=new THREE.Color(0x030712);
+ scene.background.copy(night).lerp(day,Math.min(1,daylight));
+ scene.fog.color.copy(scene.background);
+}
+
+/* Minimap */
+function updateMap(){
+ const m=el('mapInner');let h='';
+ const conv=(x,z)=>[50+(x-player.position.x)*.34,50+(z-player.position.z)*.34];
+ h+=`<i class="dot me" style="left:50%;top:50%"></i>`;
+ enemies.forEach(e=>{if(!e.visible)return;const [x,y]=conv(e.position.x,e.position.z);if(x>0&&x<100&&y>0&&y<100)h+=`<i class="dot enemy" style="left:${x}%;top:${y}%"></i>`});
+ npcs.forEach(n=>{const [x,y]=conv(n.position.x,n.position.z);if(x>0&&x<100&&y>0&&y<100)h+=`<i class="dot npc" style="left:${x}%;top:${y}%"></i>`});
+ pois.forEach(n=>{const [x,y]=conv(n.x,n.z);if(x>0&&x<100&&y>0&&y<100)h+=`<i class="dot poi" title="${n.name}" style="left:${x}%;top:${y}%"></i>`});
+ m.innerHTML=h;
+}
+
+/* Animation */
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(.033,clock.getDelta());
+ if(gameStarted && !el('inventory').classList.contains('open')&&!el('journal').classList.contains('open')&&!el('death').classList.contains('open')){
+  attackCd=Math.max(0,attackCd-dt);spellCd=Math.max(0,spellCd-dt);dashCd=Math.max(0,dashCd-dt);
+  regenTimer+=dt;if(regenTimer>1){regenTimer=0;state.mana=Math.min(state.maxMana,state.mana+1.4);updateUI();}
+  movePlayer(dt);updateEnemies(dt);updateProjectiles(dt);updateInteractions();updateDay(dt);
+  autosave+=dt;if(autosave>8){autosave=0;saveGame()}
+ }
+ particles.forEach((f,i)=>{f.position.y+=Math.sin(performance.now()*.0015+f.userData.phase)*.0015;f.material.opacity=.6+.4*Math.sin(performance.now()*.002+f.userData.phase)});
+ towerCrystal.rotation.y+=.008;portal.rotation.z+=.004;
+ updateCamera(dt);updateMap();renderer.render(scene,camera);
+}
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+
+el('playBtn').addEventListener('click',()=>{
+ el('start').style.display='none';gameStarted=true;renderer.domElement.requestPointerLock();showMessage('Encontre Lyra na torre azul.');updateUI();
+});
+loadGame();updateUI();animate();
+})();
+</script>
+</body>
+</html>
